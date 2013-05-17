@@ -80,13 +80,15 @@ main:
 	
 	
 	;*********LOOP DO JOGO
-	;call DesenhaHomem
+	
 	;obtem caractere
 	;r1 ->posicao que será
 	;impresso o caracter digitado
 	;será armazenado em r7
 	loadn r1, #1137
 	call ObtemChar
+	
+	;call DesenhaHomem
 	;********FIM do Loop do jogo
 	
 	
