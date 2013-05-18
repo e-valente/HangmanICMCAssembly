@@ -29,6 +29,9 @@ jmp main
 logojogo : string ".:FORCA ICMC:."	; Poe "\0" automaticamente no final da string
 str_putword : string "Digite a palavra desejada: "	; Poe "\0" automaticamente no final da string
 str_input_char: string "Digite uma letra: "
+str_youlose: string "Voce perdeu!"
+str_youwin: string "Voce ganhou!"
+str_game_or_exit: string "Tecle (j) para jogar ou (s) para sair!"
 str_clearscreen : string " "
 myword: var #41
 str_out: var #41
@@ -41,6 +44,7 @@ str_out: var #41
 main:
 
 	;tela inicial
+	call LimpaTela
 	call InicioCapturaWord
 	call LimpaTela
 	
@@ -80,19 +84,79 @@ main:
 	
 	
 	;*********LOOP DO JOGO
-	
+	;configura loop
+	loadn r0, #0
+	loadn r1, #7
+	loadn r6, #0  ;controla desenho de tela
+
+	Loop:
 	;obtem caractere
 	;r1 ->posicao que será
 	;impresso o caracter digitado
 	;será armazenado em r7
+	push r0
+	push r1
+	push r6
+	
 	loadn r1, #1137
 	call ObtemChar
 	
-	;call DesenhaHomem
-	;********FIM do Loop do jogo
+	;compara
+	;Implementar!!!!
+	loadn r0, #myword
+	loadn r1, #str_out
+	mov r2, r7            ;r2 conterá o char do usuario
+	call StrcmpStrFromCharTyped
+
+	
+	loadn r1, #str_out
+	loadn r0, #1005
+	loadn r2, #0
+	call ImprimeString  ;devolve em r6 a ultima string impressa
+	
+	;VERIFICA GANHADOR ->IMplementar
+	loadn r0, #str_out
+	call VerificaGanhador  ;resultado em r6
+	
+	;**********GANHOU************
+	loadn r5, #1
+	push r7
+	loadn r7, #2   ;diferente de 0 ou 1
+	cmp r6, r5
+	ceq Ganhou
+	cmp r7, r5
+	jeq JogarDenovo
+	loadn r5, #0
+	cmp r7, r5
+	jeq Sair
+	;************FIM GANHOU******
 	
 	
-	halt
+	pop r7
+	loadn r3, #0
+	pop r6
+	cmp r7, r3
+	ceq Controla_Desenho_Homem
+	
+	pop r1
+	pop r0
+	
+	inc r0
+	cmp r6, r1
+	jne Loop
+	;**********FIM do loop principal do jogo
+	
+	call Perdeu
+	loadn r5, #1
+	cmp r7, r5
+	jeq JogarDenovo
+	jmp Sair
+
+JogarDenovo:
+  jmp main
+  
+Sair:
+  halt
 	
 	
 	
@@ -238,7 +302,7 @@ DesenhaForca_GramadoLoop:
 
 
 ;********DESENHA HOMEM ******************
-DesenhaHomem:  
+DesenhaHomemEnforcado:  
 ;r0 -> caractere
 ;r1->posicao da tela
 ;r2-> incremento na posica da tela
@@ -257,7 +321,38 @@ DesenhaHomem:
     loadn r0, #'O'
     loadn r1, #379
     outchar r0, r1
+    ;sangue
+    loadn r0, #'}'
+    loadn r2, #2304
+    add r0, r0, r2
+    loadn r1, #418
+    outchar r0, r1
+    inc r1
+    inc r1
+    outchar r0, r1
+    loadn r1, #459
+    outchar r0, r1
+    
+    loadn r1, #499
+    dec r1
+    outchar r0, r1
+    inc r1
+    inc r1
+    outchar r0, r1
+    
+    
+    
+    loadn r1, #539
+    outchar r0, r1
+    loadn r1, #579
+    dec r1
+    outchar r0, r1
+    inc r1
+    inc r1
+    outchar r0, r1
+    
     ;tronco1
+    loadn r1, #659	
     loadn r0, #'|'
     loadn r2, #40
     add r1, r1, r2
@@ -283,7 +378,7 @@ DesenhaHomem:
     outchar r0, r1
      ;tronco3
     loadn r0, #'|'
-    loadn r1, #499
+    loadn r1, #779
     outchar r0, r1
     ;tronco4
     loadn r2, #40
@@ -328,8 +423,151 @@ DesenhaHomem:
     rts
     
     
+;**********CONTROLA DESENHO HOMEM
+Controla_Desenho_Homem:  ;escreva cada desenho em r6
+  
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+   
+
+ loadn r0, #0
+ cmp r6, r0
+ jeq Desenha1_Cabeca
+ 
+ loadn r0, #1
+ cmp r6, r0
+ jeq Desenha2_TroncoSuperior
+ 
+ loadn r0, #2
+ cmp r6, r0
+ jeq Desenha3_BracoDireito
+
+ loadn r0, #3
+ cmp r6, r0
+ jeq Desenha4_BracoEsquerdo
+ 
+ loadn r0, #4
+ cmp r6, r0
+ jeq Desenha5_TroncoInferior
+ 
+ loadn r0, #5
+ cmp r6, r0
+ jeq Desenha6_PeEsquerdo
+ 
+ loadn r0, #6
+ cmp r6, r0
+ jeq Desenha7_PeDireito
+ 
+ 
+Desenha1_Cabeca:
+  loadn r0, #'O'
+  loadn r1, #379
+  outchar r0, r1
+  loadn r6, #1
+  jmp Controla_Desenho_Homem_Exit
+  
+  
+Desenha2_TroncoSuperior:
+
+ loadn r0, #'|'
+ loadn r1, #419
+ outchar r0, r1
+ loadn r6, #2
+ jmp Controla_Desenho_Homem_Exit
+ 
+ 
+Desenha3_BracoDireito:
+
+ loadn r1, #460
+ loadn r0, #'~'
+ outchar r0, r1
+ inc r1
+ loadn r0, #'/'
+ outchar r0, r1
+ loadn r6, #3
+ jmp Controla_Desenho_Homem_Exit 
+ 
+ Desenha4_BracoEsquerdo:
+
+ loadn r1, #457
+ loadn r0, #'~'
+ outchar r0, r1
+ loadn r0, #'/'
+ inc r1
+ outchar r0, r1
+ loadn r6, #4
+ jmp Controla_Desenho_Homem_Exit 
+ 
+ 
+ Desenha5_TroncoInferior:
+
+ loadn r1, #459
+ loadn r0, #'|'
+ outchar r0, r1
+ 
+ loadn r2, #40
+ add r1, r1, r2
+ outchar r0, r1
+ 
+ add r1, r1, r2
+ outchar r0, r1
+ 
+ loadn r6, #5
+ jmp Controla_Desenho_Homem_Exit 
+ 
+ 
+ 
+Desenha6_PeEsquerdo:
+;pé esquerdo
+  loadn r1, #578
+  loadn r0, #'/'
+  outchar r0, r1
+  loadn r2, #40
+  add r1, r1, r2
+  dec r1
+  outchar r0, r1
+  dec r1
+  loadn r0, #'_'
+  outchar r0, r1
+ loadn r6, #6
+ jmp Controla_Desenho_Homem_Exit 
+  
+ 
+Desenha7_PeDireito:
+;pé esquerdo
+  loadn r1, #580
+  loadn r0, #'~'
+  outchar r0, r1
+  loadn r2, #40
+  add r1, r1, r2
+  inc r1
+  outchar r0, r1
+  inc r1
+  loadn r0, #'_'
+  outchar r0, r1
+ loadn r6, #7
+ jmp Controla_Desenho_Homem_Exit 
+ 
+ 
+ 
+Controla_Desenho_Homem_Exit:
+
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+  
     
-    
+  rts 
+  
+  
+
 ;************************IMPRIME STRING*********************************
 
 ImprimeString:  ;r1->posicao inicial da string, r0-> posicao inicial da tela, r2-> constante para cor devolve r6 com ultima posicao impressa
@@ -404,6 +642,46 @@ LimpaTela_Loop:
 	
 	
 LimpaTela_Sai:	
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts
+
+;**********************LIMPA A TELA Parte inferior*************************************
+
+LimpaTelaParteInferior:	;  Rotina de Impresao de Mensagens:    r0 = Posicao da tela que o primeiro caractere da mensagem sera' impresso;  r1 = endereco onde comeca a mensagem;   Obs: a mensagem sera' impressa ate' encontrar "/0"
+
+	 push r0
+	 push r1
+	 push r2
+	 push r3
+	 push r4
+	 push r5
+	 push r6
+	 push r7
+	
+	loadn r0, #960		; Posicao inicial
+	loadn r1, #1200		;posicao final
+	loadn r2, #str_clearscreen	; Carrega r1 com o endereco do vetor que contem a mensagem
+	loadi r3, r2	; r3 <- Conteudo da MEMORIA enderecada por r2
+
+	
+LimpaTelaParteInferior_Loop:
+
+	cmp r0, r1	;chegou ao fim da tela? posicao 1199, caso sim, sai
+	jeq LimpaTela_Sai
+	outchar r3, r0
+	inc r0
+	jmp LimpaTelaParteInferior_Loop
+	
+	
+	
+LimpaTelaParteInferior_Sai:	
 	pop r7
 	pop r6
 	pop r5
@@ -541,12 +819,277 @@ Loop_ObtemChar:
 	jeq Loop_ObtemChar        ;se pegou lixo, tenta denovo
 	outchar r0, r1      ;imprime
 	storei r7, r0     ;grava caractere na string str[r4] = r0
+	loadi r7, r7
 
   pop r6
   pop r5
   pop r4
   pop r3
   pop r2
+ 
+	
+  
+  rts  
   
   
+  
+;**********************STRCMP*************************
+Strcmp:  ;faz strcmp-> r0->str1, r1->str2; Se r6 =0 sao diferentes, se r6 = 1 sao iguais
+
+ ;empilha os registradores
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+  
+  loadn r3, #'\0' ;pra comparar
+  
+Strcmp_Loop:  
+  
+  loadi r5, r0    ;carrega conteudo de r0 (str1[0]) em r5
+  loadi r4, r1    ;carrega conteudo de r1 (str2[0]) em r4
+  inc r0	  ;incrementa conteudo de r0 (str1)
+  inc r1          ;incrementa conteudo de r1 (str2)
+  cmp r5, r3      ;compara com \0 pra ver se está no fim da str1
+  jeq Strcmp_last_char ;se estiver no fim, verifica se str2 tb está no fim
+  cmp r5, r4       ;compara o conteudo dos 2 caracteres atuais de str1 e str2
+  jne Strcmp_not_equal ;se nao forem igual, seta resultado e sai da rotina
+  jeq Strcmp_Loop       ;se os caracteres forem iguais, continua comparando
+  
+  
+Strcmp_last_char:     ;compara se str2 está no fim (str1 já terminou!)
+  cmp r4, r3          
+  jeq Strcmp_equal    ;se str2 tb contem \0, as strings sao iguais
+  
+Strcmp_not_equal:
+  loadn r6, #0       ;r6 recebe zero, dizendo que as strings sao diferentes
+  jmp Strcmp_Final   ;vai para o final da rotina
+  
+Strcmp_equal:
+  loadn r6, #1       ;r6 recebe zero, dizendo que as strings sao diferentes
+  
+Strcmp_Final:       ;desempilha e retorna. Nesse ponto str2 = str1
+
+  ;desimpilha os registradores
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+  
+  rts  
+  
+  
+StrcmpStrFromCharTyped:
+;r0 palavra procurada
+;r1 palavra que esta sendo montada
+;r2 caractere
+
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+  push r6
+  
+  loadi r4, r0 ;conteudo do primeiro caracter da string procurada
+  loadn r5, #'\0'
+  loadn r7, #0  ;nao trocou
+  
+StrcmpStrFromCharTyped_Loop:
+
+  cmp r4, r5
+  jeq StrcmpStrFromCharTyped_Exit
+
+  cmp r4, r2
+  jeq StrcmpStrFromCharTyped_Write
+
+  inc r1
+  inc r1
+  inc r0
+  loadi r4, r0
+  
+  jmp StrcmpStrFromCharTyped_Loop
+  
+  
+StrcmpStrFromCharTyped_Write:
+  storei r1, r2
+  loadn r7, #1
+  
+  inc r1
+  inc r1
+  inc r0
+  loadi r4, r0
+  jmp StrcmpStrFromCharTyped_Loop
+  
+StrcmpStrFromCharTyped_Exit:  
+  
+  pop r6
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+ 
+  rts
+  
+VerificaGanhador:  ;resultado em r6  
+;r1 -> string a ser comparada (_ _ _ )
+
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+  
+  loadn r1, #'\0'
+  loadn r2, #0
+  loadn r3, #'_'
+  
+VerificaGanhador_Loop:  
+  loadi r4, r0
+  cmp r4, r1  ;verifica fim da string
+  jeq VerificaGanhador_Ganhou
+  
+  cmp r4, r3
+  jeq VerificaGanhador_Perdeu
+  
+  inc r0
+  jmp VerificaGanhador_Loop
+  
+  
+  
+VerificaGanhador_Perdeu:
+  loadn r6, #0
+  jmp VerificaGanhador_Exit
+  
+  
+VerificaGanhador_Ganhou:
+  loadn r6, #1
+  
+VerificaGanhador_Exit:
+ 
+ 
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+
+  rts
+  
+;******************MSG GAHOU************  
+Ganhou:  ;resultado rm r7 se vai jogar denovo ou nao
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+  
+  call LimpaTelaParteInferior
+  loadn r1, #str_youwin
+  loadn r0, #1010
+  loadn r2, #0
+  
+  call ImprimeString
+	
+	loadn r1, #str_game_or_exit
+	loadn r0, #1080
+	loadn r2, #0
+	call ImprimeString
+	
+	loadn r1, #1137
+	call ObtemChar
+	
+	loadn r6, #'j'
+	cmp r7, r6
+	jeq Ganhou_JogarDenovo
+	jmp Ganhou_SairDoJogo
+	
+ 
+ Ganhou_SairDoJogo:
+ loadn r7, #0
+ jmp Ganhou_Exit
+ 
+ Ganhou_JogarDenovo:
+ loadn r7, #1 
+ 
+ Ganhou_Exit:
+ 
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+
+  rts
+  
+  
+  
+;******************MSG GAHOU************  
+Perdeu:  ;resultado rm r7 se vai jogar denovo ou nao
+  push r0
+  push r1
+  push r2
+  push r3
+  push r4
+  push r5
+  
+ ;****AVISO QUE PERDEU
+	call LimpaTela
+	
+	;imprime logo (estático)
+	;imprime string do logo
+	loadn r1, #logojogo
+	loadn r0, #50
+	loadn r2, #3072
+	call ImprimeString
+	
+	call DesenhaForca
+	call DesenhaHomemEnforcado
+	;call LimpaTelaParteInferior
+	loadn r1, #str_youlose 
+	loadn r0, #1010
+	loadn r2, #0
+	call ImprimeString
+	
+	loadn r1, #str_game_or_exit
+	loadn r0, #1080
+	loadn r2, #0
+	call ImprimeString
+	
+	loadn r1, #1137
+	call ObtemChar
+	
+	loadn r6, #'j'
+	cmp r7, r6
+	jeq Perdeu_JogarDenovo
+	jmp Perdeu_SairDoJogo
+	
+ 
+ Perdeu_SairDoJogo:
+ loadn r7, #0
+ jmp Perdeu_Exit
+ 
+ Perdeu_JogarDenovo:
+ loadn r7, #1 
+ 
+ Perdeu_Exit:
+ 
+  pop r5
+  pop r4
+  pop r3
+  pop r2
+  pop r1
+  pop r0
+
   rts  
